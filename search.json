@@ -1,0 +1,51 @@
+[
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "A propos",
+    "section": "",
+    "text": "Ce site a été créé pour l’Atelier Méthode du Centre Émile Durkheim."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Demo Quarto + R + Github",
+    "section": "",
+    "text": "Quarto est le “successeur” de RMarkdown. Il offre un éventail de possibilité immense pour créer des rapports, sites webs, livres, etc.\nLes examples suivants utilisent principalement ggplot2 et ggiraph. Ils sont tirés de cette page: r-graph-gallery.com/package/ggiraph.html"
+  },
+  {
+    "objectID": "index.html#explications",
+    "href": "index.html#explications",
+    "title": "Demo Quarto + R + Github",
+    "section": "",
+    "text": "Quarto est le “successeur” de RMarkdown. Il offre un éventail de possibilité immense pour créer des rapports, sites webs, livres, etc.\nLes examples suivants utilisent principalement ggplot2 et ggiraph. Ils sont tirés de cette page: r-graph-gallery.com/package/ggiraph.html"
+  },
+  {
+    "objectID": "index.html#préparation",
+    "href": "index.html#préparation",
+    "title": "Demo Quarto + R + Github",
+    "section": "Préparation",
+    "text": "Préparation\n\nlibrary(ggiraph)\nlibrary(tidyverse)\nlibrary(patchwork)\nlibrary(ggthemes)\nlibrary(sf)"
+  },
+  {
+    "objectID": "index.html#example-simple",
+    "href": "index.html#example-simple",
+    "title": "Demo Quarto + R + Github",
+    "section": "Example simple",
+    "text": "Example simple\n\n\nVoir le code\nmtcars_db &lt;- rownames_to_column(mtcars, var = \"carname\")\n\nscatter &lt;- ggplot(\n  data = mtcars_db,\n  mapping = aes(\n    x = disp, y = qsec,\n    tooltip = carname, data_id = carname\n  )\n) +\n  geom_point_interactive(\n    size = 3, hover_nearest = TRUE\n  ) +\n  labs(\n    title = \"Displacement vs Quarter Mile\",\n    x = \"Displacement\", y = \"Quarter Mile\"\n  ) +\n  theme_bw()\n\nbar &lt;- ggplot(\n  data = mtcars_db,\n  mapping = aes(\n    x = reorder(carname, mpg), y = mpg,\n    tooltip = paste(\"Car:\", carname, \"&lt;br&gt;MPG:\", mpg),\n    data_id = carname\n  )\n) +\n  geom_col_interactive(fill = \"skyblue\") +\n  coord_flip() +\n  labs(\n    title = \"Miles per Gallon by Car\",\n    x = \"Car\", y = \"Miles per Gallon\"\n  ) +\n  theme_bw()\n\ncombined_plot &lt;- scatter + bar +\n  plot_layout(ncol = 2)\n\ninteractive_plot &lt;- girafe(ggobj = combined_plot) |&gt;\n   girafe_options(\n      opts_hover(css = \"fill:cyan;stroke:black;cursor:pointer;\"),\n      opts_selection(type = \"single\", css = \"fill:red;stroke:black;\")\n   )\n\ninteractive_plot"
+  },
+  {
+    "objectID": "index.html#carte-interactive",
+    "href": "index.html#carte-interactive",
+    "title": "Demo Quarto + R + Github",
+    "section": "Carte interactive",
+    "text": "Carte interactive\n\n\nVoir le code\natlas &lt;- readr::read_rds(\n  \"https://github.com/viniciusoike/restateinsight/raw/main/static/data/atlas_sp_hdi.rds\"\n)\n\npop_hdi &lt;- atlas |&gt;\n  st_drop_geometry() |&gt;\n  mutate(\n    group_hdi = findInterval(HDI, seq(0.65, 0.95, 0.05), left.open = FALSE),\n    group_hdi = factor(group_hdi)\n  ) |&gt;\n  group_by(group_hdi) |&gt;\n  summarise(score = sum(pop, na.rm = TRUE)) |&gt;\n  ungroup() |&gt;\n  mutate(share = score / sum(score) * 100) |&gt;\n  na.omit() |&gt;\n  mutate(\n    y_text = if_else(group_hdi %in% c(0, 7), share + 3, share - 3),\n    label = paste0(round(share, 1), \"%\"),\n    data_id = as.character(group_hdi) # Add data_id to pop_hdi\n  )\n\natlas &lt;- atlas |&gt;\n  mutate(group_hdi = findInterval(HDI, seq(0.65, 0.95, 0.05), left.open = FALSE))\n\npmap &lt;- ggplot(atlas) +\n  geom_sf_interactive(aes(fill = HDI, data_id = group_hdi, tooltip = paste(\"HDI:\", HDI)), lwd = 0.05, color = \"white\") +\n  scale_fill_fermenter(\n    name = \"\",\n    breaks = seq(0.65, 0.95, 0.05),\n    direction = 1,\n    palette = \"YlGnBu\"\n  ) +\n  labs(\n    title = \"HDI in Sao Paulo, BR (2010)\",\n    subtitle = \"Microregion HDI in Sao Paulo\",\n    caption = \"Source: Atlas Brasil\"\n  ) +\n  theme_map() +\n  theme(\n    legend.position = \"none\",\n    plot.title = element_text(size = 16, hjust = 0.5),\n    plot.subtitle = element_text(hjust = 0.5)\n  )\n\nx_labels &lt;- c(\n  \"0.650 or less\", \"0.650 to 0.699\", \"0.700 to 0.749\", \"0.750 to 0.799\",\n  \"0.800 to 0.849\", \"0.850 to 0.899\", \"0.900 to 0.949\", \"0.950 or more\"\n)\n\npcol &lt;- ggplot(pop_hdi, aes(group_hdi, share, fill = group_hdi)) +\n  geom_col_interactive(aes(data_id = data_id, tooltip = paste(\"Share:\", label))) +\n  geom_hline(yintercept = 0) +\n  geom_text_interactive(\n    aes(y = y_text, label = label, color = group_hdi, data_id = data_id),\n    size = 2\n  ) +\n  coord_flip() +\n  scale_x_discrete(labels = x_labels) +\n  scale_fill_brewer(palette = \"YlGnBu\") +\n  scale_color_manual(values = c(rep(\"black\", 5), rep(\"white\", 2), \"black\")) +\n  guides(fill = \"none\", color = \"none\") +\n  labs(\n    title = \"\",\n    x = NULL,\n    y = NULL\n  ) +\n  theme_void() +\n  theme(\n    panel.grid = element_blank(),\n    plot.title = element_text(size = 8), # Reduced title size\n    axis.text.y = element_text(size = 5), # Reduced y-axis text size\n    axis.text.x = element_blank(),\n    aspect.ratio = 1.5\n  )\n\np_hdi_atlas &lt;- pmap + pcol + plot_layout(widths = c(3, 1))\np_hdi_atlas &lt;- pmap + inset_element(pcol, left = 0.5, bottom = 0, right = 1, top = 0.5)\n\ninteractive_plot &lt;- girafe(\n  ggobj = p_hdi_atlas,\n  options = list(\n    opts_hover(css = \"fill:orange;\"),\n    opts_hover_inv(css = \"opacity:0.5;\"),\n    opts_selection(type = \"single\", only_shiny = FALSE)\n  )\n)\n\ninteractive_plot"
+  },
+  {
+    "objectID": "index.html#interaction-css",
+    "href": "index.html#interaction-css",
+    "title": "Demo Quarto + R + Github",
+    "section": "Interaction + CSS",
+    "text": "Interaction + CSS\n\n\nVoir le code\nworld_sf &lt;- read_sf(\"https://raw.githubusercontent.com/holtzy/R-graph-gallery/master/DATA/world.geojson\")\nworld_sf &lt;- world_sf %&gt;%\n  filter(!name %in% c(\"Antarctica\", \"Greenland\"))\n\nhappiness_data &lt;- data.frame(\n  Country = c(\n    \"France\", \"Germany\", \"United Kingdom\",\n    \"Japan\", \"China\", \"Vietnam\",\n    \"United States of America\", \"Canada\", \"Mexico\"\n  ),\n  Continent = c(\n    \"Europe\", \"Europe\", \"Europe\",\n    \"Asia\", \"Asia\", \"Asia\",\n    \"North America\", \"North America\", \"North America\"\n  ),\n  Happiness_Score = rnorm(mean = 30, sd = 20, n = 9),\n  GDP_per_capita = rnorm(mean = 30, sd = 20, n = 9),\n  Social_support = rnorm(mean = 30, sd = 20, n = 9),\n  Healthy_life_expectancy = rnorm(mean = 30, sd = 20, n = 9)\n)\n\nworld_sf &lt;- world_sf %&gt;%\n  left_join(happiness_data, by = c(\"name\" = \"Country\"))\n\np1 &lt;- ggplot(world_sf, aes(\n  GDP_per_capita,\n  Happiness_Score,\n  tooltip = name,\n  data_id = name,\n  color = name\n)) +\n  geom_point_interactive(data = filter(world_sf, !is.na(Happiness_Score)), size = 4) +\n  theme_minimal() +\n  theme(\n    axis.title.x = element_blank(),\n    axis.title.y = element_blank(),\n    legend.position = \"none\"\n  )\n\np2 &lt;- ggplot(world_sf, aes(\n  x = reorder(name, Happiness_Score),\n  y = Happiness_Score,\n  tooltip = name,\n  data_id = name,\n  fill = name\n)) +\n  geom_col_interactive(data = filter(world_sf, !is.na(Happiness_Score))) +\n  coord_flip() +\n  theme_minimal() +\n  theme(\n    axis.title.x = element_blank(),\n    axis.title.y = element_blank(),\n    legend.position = \"none\"\n  )\n\np3 &lt;- ggplot() +\n  geom_sf(data = world_sf, fill = \"lightgrey\", color = \"lightgrey\") +\n  geom_sf_interactive(\n    data = filter(world_sf, !is.na(Happiness_Score)),\n    aes(fill = name, tooltip = name, data_id = name)\n  ) +\n  coord_sf(crs = st_crs(3857)) +\n  theme_void() +\n  theme(\n    axis.title.x = element_blank(),\n    axis.title.y = element_blank(),\n    legend.position = \"none\"\n  )\n\ncombined_plot &lt;- (p1 + p2) / p3 + plot_layout(heights = c(1, 2))\n\n\n\nSans CSSAvec CSS\n\n\n\n\nVoir le code\ninteractive_plot &lt;- girafe(ggobj = combined_plot)\ninteractive_plot\n\n\n\n\n\n\n\n\n\n\nVoir le code\ntooltip_css &lt;- \"\n  border-radius: 12px;\n  color: #333;\n     background-color: white;\n   padding: 10px;\n  font-size: 14px;\n  transition: all 0.5s ease-out;\n\"\n\nhover_css &lt;- \"\n  filter: brightness(75%);\n  cursor: pointer;\n  transition: all 0.5s ease-out;\n  filter: brightness(1.15);\n\"\n\ninteractive_plot &lt;- girafe(ggobj = combined_plot)\ninteractive_plot &lt;- interactive_plot |&gt;\n  girafe_options(\n    opts_hover(css = hover_css),\n    opts_tooltip(css = tooltip_css),\n    opts_hover_inv(css = \"opacity:0.3; transition: all 0.2s ease-out;\")\n  )\ninteractive_plot"
+  }
+]
