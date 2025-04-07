@@ -1,0 +1,5 @@
+---
+title: "A propos"
+---
+
+Ce site a été créé pour l'Atelier Méthode du Centre Émile Durkheim.

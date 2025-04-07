@@ -1,0 +1,285 @@
+---
+title: "Demo Quarto + R + Github"
+description: "Cette page web est générée automatiquement à partir d'un unique fichier quarto (`.qmd`)."
+---
+
+## Explications
+
+Quarto est le "successeur" de RMarkdown. Il offre un éventail de possibilité immense pour créer des rapports, sites webs, livres, etc.
+
+Les examples suivants utilisent principalement `ggplot2` et `ggiraph`. Ils sont tirés de cette page: [r-graph-gallery.com/package/ggiraph.html](https://r-graph-gallery.com/package/ggiraph.html)
+
+
+## Préparation
+
+```{r}
+#| code-fold: false
+library(ggiraph)
+library(tidyverse)
+library(patchwork)
+library(ggthemes)
+library(sf)
+```
+
+
+## Example simple
+
+```{r}
+mtcars_db <- rownames_to_column(mtcars, var = "carname")
+
+scatter <- ggplot(
+  data = mtcars_db,
+  mapping = aes(
+    x = disp, y = qsec,
+    tooltip = carname, data_id = carname
+  )
+) +
+  geom_point_interactive(
+    size = 3, hover_nearest = TRUE
+  ) +
+  labs(
+    title = "Displacement vs Quarter Mile",
+    x = "Displacement", y = "Quarter Mile"
+  ) +
+  theme_bw()
+
+bar <- ggplot(
+  data = mtcars_db,
+  mapping = aes(
+    x = reorder(carname, mpg), y = mpg,
+    tooltip = paste("Car:", carname, "<br>MPG:", mpg),
+    data_id = carname
+  )
+) +
+  geom_col_interactive(fill = "skyblue") +
+  coord_flip() +
+  labs(
+    title = "Miles per Gallon by Car",
+    x = "Car", y = "Miles per Gallon"
+  ) +
+  theme_bw()
+
+combined_plot <- scatter + bar +
+  plot_layout(ncol = 2)
+
+interactive_plot <- girafe(ggobj = combined_plot) |>
+   girafe_options(
+      opts_hover(css = "fill:cyan;stroke:black;cursor:pointer;"),
+      opts_selection(type = "single", css = "fill:red;stroke:black;")
+   )
+
+interactive_plot
+```
+
+
+## Carte interactive
+
+```{r}
+atlas <- readr::read_rds(
+  "https://github.com/viniciusoike/restateinsight/raw/main/static/data/atlas_sp_hdi.rds"
+)
+
+pop_hdi <- atlas |>
+  st_drop_geometry() |>
+  mutate(
+    group_hdi = findInterval(HDI, seq(0.65, 0.95, 0.05), left.open = FALSE),
+    group_hdi = factor(group_hdi)
+  ) |>
+  group_by(group_hdi) |>
+  summarise(score = sum(pop, na.rm = TRUE)) |>
+  ungroup() |>
+  mutate(share = score / sum(score) * 100) |>
+  na.omit() |>
+  mutate(
+    y_text = if_else(group_hdi %in% c(0, 7), share + 3, share - 3),
+    label = paste0(round(share, 1), "%"),
+    data_id = as.character(group_hdi) # Add data_id to pop_hdi
+  )
+
+atlas <- atlas |>
+  mutate(group_hdi = findInterval(HDI, seq(0.65, 0.95, 0.05), left.open = FALSE))
+
+pmap <- ggplot(atlas) +
+  geom_sf_interactive(aes(fill = HDI, data_id = group_hdi, tooltip = paste("HDI:", HDI)), lwd = 0.05, color = "white") +
+  scale_fill_fermenter(
+    name = "",
+    breaks = seq(0.65, 0.95, 0.05),
+    direction = 1,
+    palette = "YlGnBu"
+  ) +
+  labs(
+    title = "HDI in Sao Paulo, BR (2010)",
+    subtitle = "Microregion HDI in Sao Paulo",
+    caption = "Source: Atlas Brasil"
+  ) +
+  theme_map() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 16, hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+x_labels <- c(
+  "0.650 or less", "0.650 to 0.699", "0.700 to 0.749", "0.750 to 0.799",
+  "0.800 to 0.849", "0.850 to 0.899", "0.900 to 0.949", "0.950 or more"
+)
+
+pcol <- ggplot(pop_hdi, aes(group_hdi, share, fill = group_hdi)) +
+  geom_col_interactive(aes(data_id = data_id, tooltip = paste("Share:", label))) +
+  geom_hline(yintercept = 0) +
+  geom_text_interactive(
+    aes(y = y_text, label = label, color = group_hdi, data_id = data_id),
+    size = 2
+  ) +
+  coord_flip() +
+  scale_x_discrete(labels = x_labels) +
+  scale_fill_brewer(palette = "YlGnBu") +
+  scale_color_manual(values = c(rep("black", 5), rep("white", 2), "black")) +
+  guides(fill = "none", color = "none") +
+  labs(
+    title = "",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_void() +
+  theme(
+    panel.grid = element_blank(),
+    plot.title = element_text(size = 8), # Reduced title size
+    axis.text.y = element_text(size = 5), # Reduced y-axis text size
+    axis.text.x = element_blank(),
+    aspect.ratio = 1.5
+  )
+
+p_hdi_atlas <- pmap + pcol + plot_layout(widths = c(3, 1))
+p_hdi_atlas <- pmap + inset_element(pcol, left = 0.5, bottom = 0, right = 1, top = 0.5)
+
+interactive_plot <- girafe(
+  ggobj = p_hdi_atlas,
+  options = list(
+    opts_hover(css = "fill:orange;"),
+    opts_hover_inv(css = "opacity:0.5;"),
+    opts_selection(type = "single", only_shiny = FALSE)
+  )
+)
+
+interactive_plot
+```
+
+
+## Interaction + CSS
+
+
+```{r}
+world_sf <- read_sf("https://raw.githubusercontent.com/holtzy/R-graph-gallery/master/DATA/world.geojson")
+world_sf <- world_sf %>%
+  filter(!name %in% c("Antarctica", "Greenland"))
+
+happiness_data <- data.frame(
+  Country = c(
+    "France", "Germany", "United Kingdom",
+    "Japan", "China", "Vietnam",
+    "United States of America", "Canada", "Mexico"
+  ),
+  Continent = c(
+    "Europe", "Europe", "Europe",
+    "Asia", "Asia", "Asia",
+    "North America", "North America", "North America"
+  ),
+  Happiness_Score = rnorm(mean = 30, sd = 20, n = 9),
+  GDP_per_capita = rnorm(mean = 30, sd = 20, n = 9),
+  Social_support = rnorm(mean = 30, sd = 20, n = 9),
+  Healthy_life_expectancy = rnorm(mean = 30, sd = 20, n = 9)
+)
+
+world_sf <- world_sf %>%
+  left_join(happiness_data, by = c("name" = "Country"))
+
+p1 <- ggplot(world_sf, aes(
+  GDP_per_capita,
+  Happiness_Score,
+  tooltip = name,
+  data_id = name,
+  color = name
+)) +
+  geom_point_interactive(data = filter(world_sf, !is.na(Happiness_Score)), size = 4) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.position = "none"
+  )
+
+p2 <- ggplot(world_sf, aes(
+  x = reorder(name, Happiness_Score),
+  y = Happiness_Score,
+  tooltip = name,
+  data_id = name,
+  fill = name
+)) +
+  geom_col_interactive(data = filter(world_sf, !is.na(Happiness_Score))) +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.position = "none"
+  )
+
+p3 <- ggplot() +
+  geom_sf(data = world_sf, fill = "lightgrey", color = "lightgrey") +
+  geom_sf_interactive(
+    data = filter(world_sf, !is.na(Happiness_Score)),
+    aes(fill = name, tooltip = name, data_id = name)
+  ) +
+  coord_sf(crs = st_crs(3857)) +
+  theme_void() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.position = "none"
+  )
+
+combined_plot <- (p1 + p2) / p3 + plot_layout(heights = c(1, 2))
+```
+
+
+::: {.panel-tabset}
+
+### Sans CSS
+
+```{r}
+interactive_plot <- girafe(ggobj = combined_plot)
+interactive_plot
+```
+
+
+### Avec CSS
+
+```{r}
+tooltip_css <- "
+  border-radius: 12px;
+  color: #333;
+     background-color: white;
+   padding: 10px;
+  font-size: 14px;
+  transition: all 0.5s ease-out;
+"
+
+hover_css <- "
+  filter: brightness(75%);
+  cursor: pointer;
+  transition: all 0.5s ease-out;
+  filter: brightness(1.15);
+"
+
+interactive_plot <- girafe(ggobj = combined_plot)
+interactive_plot <- interactive_plot |>
+  girafe_options(
+    opts_hover(css = hover_css),
+    opts_tooltip(css = tooltip_css),
+    opts_hover_inv(css = "opacity:0.3; transition: all 0.2s ease-out;")
+  )
+interactive_plot
+```
+
+

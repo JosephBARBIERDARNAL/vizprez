@@ -1,0 +1,23 @@
+project:
+  type: website
+
+website:
+  title: "Demo Quarto"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Demo
+      - href: about.qmd
+        text: A propos
+
+
+format:
+    html:
+      theme: cosmo
+      toc: true
+      code-fold: true
+      code-summary: "Voir le code"
+      css: style.css
+
+execute: 
+  cache: true

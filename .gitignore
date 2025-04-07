@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+/.quarto/
+
+*cache*
+_site/
