@@ -227,6 +227,15 @@ wheels = [
 ]
 
 [[package]]
+name = "highlight-text"
+version = "0.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9a/67/819151e5e9a4580b26620f86d95f0f11f46bdd792feffa16d3819a2cb4d4/highlight_text-0.2.tar.gz", hash = "sha256:062d8f648fd474157367e435e37ef5c68cc58b1c8d0b006baab2e7c1c60bdc37", size = 13273 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b2/ca/acb9567cf3cde352a08e2b6bb6e0b0e278061d07b2e0bf9bdd7cfaa9bded/highlight_text-0.2-py3-none-any.whl", hash = "sha256:fb1333628f500a0ff2c25af757511eb39034c1d19571994821b2e0f76d040f75", size = 11973 },
+]
+
+[[package]]
 name = "htmltools"
 version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -833,6 +842,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "dayplot" },
     { name = "great-tables" },
+    { name = "highlight-text" },
     { name = "matplotlib" },
     { name = "morethemes" },
     { name = "pandas" },
@@ -847,6 +857,7 @@ dependencies = [
 requires-dist = [
     { name = "dayplot", specifier = ">=0.2.0" },
     { name = "great-tables", specifier = ">=0.17.0" },
+    { name = "highlight-text", specifier = ">=0.2" },
     { name = "matplotlib", specifier = ">=3.10.1" },
     { name = "morethemes", specifier = ">=0.3.1" },
     { name = "pandas", specifier = ">=2.2.3" },
